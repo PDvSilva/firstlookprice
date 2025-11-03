@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: amazon-eu-comparator
+    env: node
+    region: frankfurt  # ou o mais próximo de ti
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+
+

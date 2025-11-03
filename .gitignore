@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store
+.DS_Store
+.env
+.tmp
+.cache
+tmp/
+logs/
+.puppeteer
+*.log
+.env.local
+dist/
+build/
