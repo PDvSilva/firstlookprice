@@ -13,6 +13,6 @@ services:
         value: production
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
         value: "false"
-    healthCheckPath: /api/health
+    healthCheckPath: /health
 
 
