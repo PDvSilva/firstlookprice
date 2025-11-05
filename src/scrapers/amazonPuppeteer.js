@@ -356,18 +356,33 @@ export async function launchBrowser() {
       }
     }
     
-    // Se não encontrou, tenta usar o Chrome do Puppeteer
+    // Se não encontrou, tenta baixar via puppeteer browsers install
     if (!executablePath) {
       try {
-        const puppeteerPath = await import('puppeteer');
-        const browserFetcher = puppeteerPath.default.createBrowserFetcher();
-        const revisionInfo = await browserFetcher.download('131.0.6778.204').catch(() => null);
-        if (revisionInfo && revisionInfo.executablePath) {
-          executablePath = revisionInfo.executablePath;
-          console.log(`✅ Chrome baixado pelo Puppeteer: ${executablePath}`);
+        console.log('📥 Chrome não encontrado, tentando instalar via Puppeteer...');
+        const { execSync } = await import('child_process');
+        execSync('npx puppeteer browsers install chrome', { 
+          stdio: 'ignore',
+          timeout: 120000 // 2 minutos
+        });
+        console.log('✅ Chrome instalado via Puppeteer');
+        
+        // Tenta encontrar o Chrome instalado pelo Puppeteer
+        const fs = await import('fs');
+        const path = await import('path');
+        const os = await import('os');
+        const cacheDir = path.join(os.homedir(), '.cache', 'puppeteer');
+        
+        if (fs.existsSync(cacheDir)) {
+          const files = fs.readdirSync(cacheDir, { recursive: true });
+          const chromePath = files.find(f => f.includes('chrome') && f.endsWith('chrome'));
+          if (chromePath) {
+            executablePath = path.join(cacheDir, chromePath);
+            console.log(`✅ Chrome encontrado após instalação: ${executablePath}`);
+          }
         }
       } catch (e) {
-        console.warn('⚠️ Não foi possível baixar Chrome automaticamente:', e.message);
+        console.warn('⚠️ Não foi possível instalar Chrome automaticamente:', e.message);
       }
     }
     
