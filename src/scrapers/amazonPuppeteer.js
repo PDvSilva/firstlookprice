@@ -442,7 +442,7 @@ export async function launchBrowser() {
     console.error('❌ ExecutablePath usado:', executablePath || 'NENHUM (Puppeteer padrão)');
     throw error;
   }
-  
+}
 
 /** Wrapper para busca por query usando o novo sistema */
 export async function scrapeAmazonByQuery(query, country = 'uk') {
