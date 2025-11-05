@@ -343,96 +343,21 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 export async function launchBrowser() {
   console.log('🌐 Iniciando Puppeteer...');
   
-  try {
-    // Tenta encontrar o Chrome em vários locais possíveis
-    const possiblePaths = [
-      process.env.PUPPETEER_EXECUTABLE_PATH,
-      '/usr/bin/google-chrome',
-      '/usr/bin/chromium',
-      '/usr/bin/chromium-browser',
-    ];
-    
-    let executablePath = undefined;
-    for (const path of possiblePaths) {
-      if (path) {
-        try {
-          const fs = await import('fs');
-          if (fs.existsSync(path)) {
-            executablePath = path;
-            console.log(`✅ Chrome encontrado em: ${path}`);
-            break;
-          }
-        } catch (e) {
-          // Ignora erro de import ou existsSync
-        }
-      }
-    }
-    
-    // Se não encontrou, tenta baixar via puppeteer browsers install
-    if (!executablePath) {
-      try {
-        console.log('📥 Chrome não encontrado, tentando instalar via Puppeteer...');
-        const { execSync } = await import('child_process');
-        execSync('npx puppeteer browsers install chrome', { 
-          stdio: 'ignore',
-          timeout: 120000 // 2 minutos
-        });
-        console.log('✅ Chrome instalado via Puppeteer');
-        
-        // Tenta encontrar o Chrome instalado pelo Puppeteer
-        const fs = await import('fs');
-        const path = await import('path');
-        const os = await import('os');
-        const cacheDir = path.join(os.homedir(), '.cache', 'puppeteer');
-        
-        if (fs.existsSync(cacheDir)) {
-          const files = fs.readdirSync(cacheDir, { recursive: true });
-          const chromePath = files.find(f => f.includes('chrome') && f.endsWith('chrome'));
-          if (chromePath) {
-            executablePath = path.join(cacheDir, chromePath);
-            console.log(`✅ Chrome encontrado após instalação: ${executablePath}`);
-          }
-        }
-      } catch (e) {
-        console.warn('⚠️ Não foi possível instalar Chrome automaticamente:', e.message);
-      }
-    }
-    
-    const launchOptions = {
-      headless: "new",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process",
-        "--disable-software-rasterizer",
-        "--disable-extensions",
-        "--disable-background-networking",
-        "--disable-background-timer-throttling",
-        "--disable-renderer-backgrounding",
-        "--disable-backgrounding-occluded-windows",
-      ],
-      timeout: 60000,
-    };
-    
-    if (executablePath) {
-      launchOptions.executablePath = executablePath;
-      console.log(`📁 Usando Chrome em: ${executablePath}`);
-    } else {
-      console.log('⚠️ Usando Chrome padrão do sistema (Puppeteer vai tentar encontrar)');
-    }
-    
-    const browser = await puppeteer.launch(launchOptions);
-    
-    console.log('✅ Puppeteer iniciado com sucesso');
-    return browser;
-  } catch (error) {
-    console.error('❌ Erro ao iniciar Puppeteer:', error.message);
-    console.error('❌ Stack:', error.stack?.substring(0, 500));
-    console.error('❌ Dica: Verifique se o Chrome foi instalado durante o build');
-    throw error;
-  }
+  const browser = await puppeteer.launch({
+    headless: "new",
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/opt/render/.cache/puppeteer/chrome/linux-*/chrome",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--single-process",
+      "--no-zygote",
+    ],
+  });
+  
+  console.log('✅ Puppeteer iniciado com sucesso');
+  return browser;
 }
 
 /** Wrapper para busca por query usando o novo sistema */

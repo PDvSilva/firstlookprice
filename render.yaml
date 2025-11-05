@@ -2,15 +2,12 @@ services:
   - type: web
     name: amazon-eu-comparator
     env: node
-    region: frankfurt
     plan: free
-    buildCommand: npm install && npx puppeteer browsers install chrome || echo "Chrome install failed, will try at runtime"
-    startCommand: node src/server.js
+    region: frankfurt
+    buildCommand: |
+      npm install
+      npx puppeteer browsers install chrome
+    startCommand: npm start
     envVars:
       - key: PORT
         value: 10000
-      - key: NODE_ENV
-        value: production
-    healthCheckPath: /health
-
-
