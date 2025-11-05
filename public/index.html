@@ -804,6 +804,53 @@
       }
     }
 
+    /* Categories Section - KuantoKusta Style */
+    .categories-section {
+      margin: 3rem 0;
+      padding: 2rem 0;
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .category-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--foreground);
+    }
+
+    .category-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
+      background: hsl(var(--primary) / 0.05);
+    }
+
+    .category-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .category-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
     /* Features Section */
     .features {
       display: grid;
@@ -1000,6 +1047,64 @@
       </div>
     </div>
 
+    <!-- Categories Section - KuantoKusta Style -->
+    <div class="categories-section" id="categories-section">
+      <div class="section-header">
+        <h2 class="section-title">🛍️ Categorias Populares</h2>
+        <p class="section-subtitle">Explore produtos por categoria</p>
+      </div>
+      <div class="categories-grid">
+        <div class="category-card" onclick="setQuery('smartphone')">
+          <div class="category-icon">📱</div>
+          <div class="category-name">Smartphones</div>
+        </div>
+        <div class="category-card" onclick="setQuery('laptop')">
+          <div class="category-icon">💻</div>
+          <div class="category-name">Laptops</div>
+        </div>
+        <div class="category-card" onclick="setQuery('headphones')">
+          <div class="category-icon">🎧</div>
+          <div class="category-name">Auscultadores</div>
+        </div>
+        <div class="category-card" onclick="setQuery('smartwatch')">
+          <div class="category-icon">⌚</div>
+          <div class="category-name">Smartwatches</div>
+        </div>
+        <div class="category-card" onclick="setQuery('tablet')">
+          <div class="category-icon">📱</div>
+          <div class="category-name">Tablets</div>
+        </div>
+        <div class="category-card" onclick="setQuery('camera')">
+          <div class="category-icon">📷</div>
+          <div class="category-name">Câmaras</div>
+        </div>
+        <div class="category-card" onclick="setQuery('gaming')">
+          <div class="category-icon">🎮</div>
+          <div class="category-name">Gaming</div>
+        </div>
+        <div class="category-card" onclick="setQuery('tv')">
+          <div class="category-icon">📺</div>
+          <div class="category-name">TVs</div>
+        </div>
+        <div class="category-card" onclick="setQuery('speaker')">
+          <div class="category-icon">🔊</div>
+          <div class="category-name">Colunas</div>
+        </div>
+        <div class="category-card" onclick="setQuery('keyboard')">
+          <div class="category-icon">⌨️</div>
+          <div class="category-name">Teclados</div>
+        </div>
+        <div class="category-card" onclick="setQuery('mouse')">
+          <div class="category-icon">🖱️</div>
+          <div class="category-name">Ratos</div>
+        </div>
+        <div class="category-card" onclick="setQuery('monitor')">
+          <div class="category-icon">🖥️</div>
+          <div class="category-name">Monitores</div>
+        </div>
+      </div>
+    </div>
+
     <div id="results"></div>
 
     <div class="features" id="features" style="display: none;">
@@ -1053,6 +1158,7 @@
       document.getElementById('loading').style.display = 'block';
       document.getElementById('results').innerHTML = '';
       document.getElementById('features').style.display = 'none';
+      document.getElementById('categories-section').style.display = 'none';
 
       try {
         const response = await fetch(`/compare?q=${encodeURIComponent(query)}`);
@@ -1110,8 +1216,12 @@
           </div>
         `;
         document.getElementById('features').style.display = 'grid';
+        document.getElementById('categories-section').style.display = 'block';
         return;
       }
+
+      // Hide categories when showing results
+      document.getElementById('categories-section').style.display = 'none';
 
       // Calculate stats
       const prices = data.map(item => item.priceEUR);
@@ -1203,10 +1313,23 @@
         const isBestPrice = index === 0;
         const savingsPercent = index > 0 ? (((item.priceEUR - minPrice) / minPrice) * 100).toFixed(1) : 0;
         
+        const countryCode = item.country.includes('Spain') ? 'ES' : 
+                           item.country.includes('France') ? 'FR' :
+                           item.country.includes('Germany') ? 'DE' :
+                           item.country.includes('Italy') ? 'IT' : 'UK';
+        
         cardsHTML += `
           <div class="product-card ${isBestPrice ? 'best' : ''}" onclick="window.open('${item.link}', '_blank')">
             <div class="product-image-wrapper">
               ${isBestPrice ? '<div class="product-discount">🏆 Melhor Preço</div>' : ''}
+              <div class="product-badges">
+                <div class="badge-small badge-best-price" style="display: ${isBestPrice ? 'block' : 'none'}">
+                  Melhor Preço
+                </div>
+                <div class="badge-small" style="background: hsl(214, 100%, 48%); color: white;">
+                  ${countryCode}
+                </div>
+              </div>
               ${item.imageUrl ? 
                 `<img src="${item.imageUrl}" alt="${item.title || 'Product'}" class="product-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />` : 
                 ''
@@ -1216,23 +1339,29 @@
               </div>
             </div>
             <div class="product-card-content">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">${getCountryFlag(item.country)}</span>
+                <span style="font-size: 0.75rem; color: var(--muted-foreground); font-weight: 500;">Amazon ${getCountryName(item.country)}</span>
+              </div>
               <h3 class="product-title">${item.title || 'Sem título disponível'}</h3>
-              ${index > 0 ? `<div class="product-savings">📉 ${savingsPercent}% mais caro</div>` : ''}
+              ${index > 0 ? `<div class="product-savings">📉 ${savingsPercent}% mais caro que o melhor</div>` : 
+                '<div class="product-savings" style="color: hsl(142, 71%, 38%);">✅ Melhor oferta disponível</div>'}
               <div class="product-price-section">
-                <div class="product-price-label">a partir de</div>
+                <div class="product-price-label">Preço em ${item.currency}</div>
                 <div class="product-price">
                   <span class="product-price-main">${item.currency} ${item.price.toFixed(2)}</span>
                 </div>
-                <div style="color: hsl(142, 71%, 38%); font-weight: 600; margin-top: 0.25rem;">
-                  €${item.priceEUR.toFixed(2)} em EUR
+                <div style="color: hsl(142, 71%, 38%); font-weight: 700; font-size: 1.125rem; margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>€${item.priceEUR.toFixed(2)}</span>
+                  ${isBestPrice ? '<span style="font-size: 0.875rem; background: hsl(142, 71%, 38%); color: white; padding: 0.25rem 0.5rem; border-radius: 0.375rem;">🏆 Melhor</span>' : ''}
                 </div>
               </div>
               <div class="product-footer">
                 <div class="product-stores">
                   <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 0.25rem;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
-                  Amazon
+                  Ver Oferta
                 </div>
               </div>
             </div>
@@ -1243,6 +1372,7 @@
       cardsHTML += '</div>';
       resultsDiv.innerHTML = statsHTML + tableHTML + cardsHTML;
       document.getElementById('features').style.display = 'grid';
+      document.getElementById('categories-section').style.display = 'none';
     }
 
     function getCountryFlag(countryName) {
