@@ -128,20 +128,35 @@ async function toEUR(amount, from){
 
 /** Função que executa o scraping */
 async function runScrape(q) {
+  console.log(`🚀 Iniciando scraping para: "${q}"`);
+  
   // Carrega o scraper apenas quando necessário
-  const { launchBrowser: lb, scrapeAmazonSite: sas } = await loadScraper();
-  const browser = await lb();
-  const limit = pLimit(2); // limitar concorrência para evitar bloqueios
-
+  let browser;
   try {
-    const tasks = SITES.map(site => limit(() => sas(site, q, browser)
-      .catch(err => {
-        console.warn(`⚠️ ${site.country} falhou: ${err.message}`);
-        return null;
-      })
-    ));
+    const { launchBrowser: lb, scrapeAmazonSite: sas } = await loadScraper();
+    console.log('📦 Scraper carregado, iniciando browser...');
+    
+    browser = await lb();
+    console.log('✅ Browser iniciado');
+    
+    const limit = pLimit(2); // limitar concorrência para evitar bloqueios
+
+    console.log(`🌍 Iniciando scraping em ${SITES.length} sites...`);
+    const tasks = SITES.map(site => limit(() => {
+      console.log(`🔍 Scraping ${site.country} (${site.domain})...`);
+      return sas(site, q, browser)
+        .then(result => {
+          console.log(`✅ ${site.country} sucesso`);
+          return result;
+        })
+        .catch(err => {
+          console.warn(`⚠️ ${site.country} falhou: ${err.message}`);
+          return null;
+        });
+    }));
 
     const raw = (await Promise.all(tasks)).filter(Boolean);
+    console.log(`📊 ${raw.length} de ${SITES.length} sites retornaram resultados`);
 
     for (const r of raw) {
       r.priceEUR = await toEUR(r.price, r.currency);
@@ -157,10 +172,16 @@ async function runScrape(q) {
     
     return raw;
   } catch (err) {
-    console.error("compare error:", err.message);
+    console.error("❌ Erro no runScrape:", err.message);
+    console.error("❌ Stack:", err.stack);
     throw err;
   } finally {
-    await browser.close().catch(() => {});
+    if (browser) {
+      console.log('🔄 Fechando browser...');
+      await browser.close().catch(err => {
+        console.warn('⚠️ Erro ao fechar browser:', err.message);
+      });
+    }
   }
 }
 
@@ -168,6 +189,8 @@ app.get("/compare", async (req, res) => {
   const q = (req.query.q || "").toString().trim().toLowerCase();
 
   if (!q) return res.status(400).json({ error: "Missing query" });
+
+  console.log(`📥 Requisição recebida para: "${q}"`);
 
   // Verifica cache (válido por 15 minutos)
   if (cache.has(q) && Date.now() - cache.get(q).time < 15 * 60 * 1000) {
@@ -179,10 +202,19 @@ app.get("/compare", async (req, res) => {
   
   try {
     const results = await runScrape(q);
+    
+    if (!results || results.length === 0) {
+      console.warn(`⚠️ Nenhum resultado encontrado para: ${q}`);
+      return res.json([]);
+    }
+    
+    console.log(`✅ ${results.length} resultados encontrados para: ${q}`);
     cache.set(q, { data: results, time: Date.now() });
     res.json(results);
   } catch (err) {
-    res.status(500).json({ error: "scrape_failed" });
+    console.error(`❌ Erro no scraping para "${q}":`, err.message);
+    console.error(`❌ Stack:`, err.stack);
+    res.status(500).json({ error: "scrape_failed", message: err.message });
   }
 });
 

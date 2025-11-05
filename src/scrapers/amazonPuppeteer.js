@@ -264,17 +264,29 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 
 /** Arranca um browser único e devolve função de fecho */
 export async function launchBrowser() {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--single-process",
-    ],
-  });
-  return browser;
+  console.log('🌐 Iniciando Puppeteer...');
+  
+  try {
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+        "--disable-software-rasterizer",
+        "--disable-extensions",
+      ],
+      timeout: 60000, // 60 segundos timeout
+    });
+    
+    console.log('✅ Puppeteer iniciado com sucesso');
+    return browser;
+  } catch (error) {
+    console.error('❌ Erro ao iniciar Puppeteer:', error);
+    throw error;
+  }
 }
 
 /** Wrapper para busca por query usando o novo sistema */
