@@ -21,10 +21,18 @@ import pLimit from "p-limit";
 
 console.log('✅ Dependências básicas importadas');
 
-// Import do Puppeteer
-console.log('📦 Importando scraper...');
-import { launchBrowser, scrapeAmazonSite } from "./scrapers/amazonPuppeteer.js";
-console.log('✅ Scraper importado com sucesso');
+// Lazy import do Puppeteer - só importa quando necessário
+let launchBrowser, scrapeAmazonSite;
+async function loadScraper() {
+  if (!launchBrowser) {
+    console.log('📦 Carregando scraper (lazy)...');
+    const scraperModule = await import("./scrapers/amazonPuppeteer.js");
+    launchBrowser = scraperModule.launchBrowser;
+    scrapeAmazonSite = scraperModule.scrapeAmazonSite;
+    console.log('✅ Scraper carregado com sucesso');
+  }
+  return { launchBrowser, scrapeAmazonSite };
+}
 
 
 
@@ -118,11 +126,13 @@ async function toEUR(amount, from){
 
 /** Função que executa o scraping */
 async function runScrape(q) {
-  const browser = await launchBrowser();
+  // Carrega o scraper apenas quando necessário
+  const { launchBrowser: lb, scrapeAmazonSite: sas } = await loadScraper();
+  const browser = await lb();
   const limit = pLimit(2); // limitar concorrência para evitar bloqueios
 
   try {
-    const tasks = SITES.map(site => limit(() => scrapeAmazonSite(site, q, browser)
+    const tasks = SITES.map(site => limit(() => sas(site, q, browser)
       .catch(err => {
         console.warn(`⚠️ ${site.country} falhou: ${err.message}`);
         return null;
