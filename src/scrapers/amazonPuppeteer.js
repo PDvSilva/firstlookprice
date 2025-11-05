@@ -341,13 +341,11 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 
 /** Arranca um browser único e devolve função de fecho */
 export async function launchBrowser() {
-  const executablePath = puppeteer.executablePath();
-
-  console.log("🧭 Chrome path in use:", executablePath);
+  console.log("🚀 Starting Puppeteer on Render...");
 
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
