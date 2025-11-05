@@ -341,10 +341,16 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 
 /** Arranca um browser único e devolve função de fecho */
 export async function launchBrowser() {
-  console.log("🚀 Starting Puppeteer on Render (embedded Chrome)...");
+  console.log("🚀 Starting Puppeteer on Render (installed Chrome)...");
+
+  const executablePath =
+    process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
+
+  console.log("🧭 Chrome path:", executablePath);
 
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -357,6 +363,7 @@ export async function launchBrowser() {
 
   const version = await browser.version();
   console.log("✅ Chrome iniciado com versão:", version);
+
   return browser;
 }
 
