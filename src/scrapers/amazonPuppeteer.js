@@ -352,23 +352,34 @@ export async function launchBrowser() {
       const path = await import('path');
       
       const cacheBase = '/opt/render/.cache/puppeteer';
+      console.log(`🔍 Procurando Chrome em: ${cacheBase}`);
+      
       if (fs.existsSync(cacheBase)) {
+        console.log(`✅ Diretório cache existe: ${cacheBase}`);
         // Procura em subdiretórios
         const dirs = fs.readdirSync(cacheBase);
+        console.log(`📁 Subdiretórios encontrados: ${dirs.join(', ')}`);
+        
         for (const dir of dirs) {
           const chromeDir = path.join(cacheBase, dir);
           if (fs.statSync(chromeDir).isDirectory()) {
+            console.log(`🔍 Procurando em: ${chromeDir}`);
             // Procura pelo executável chrome
-            const findChrome = (dirPath) => {
+            const findChrome = (dirPath, depth = 0) => {
+              if (depth > 5) return null; // Limite de profundidade
               try {
                 const entries = fs.readdirSync(dirPath, { withFileTypes: true });
                 for (const entry of entries) {
                   const fullPath = path.join(dirPath, entry.name);
                   if (entry.isDirectory()) {
-                    const found = findChrome(fullPath);
+                    const found = findChrome(fullPath, depth + 1);
                     if (found) return found;
-                  } else if (entry.name === 'chrome' || entry.name === 'chrome-linux') {
-                    return fullPath;
+                  } else if (entry.name === 'chrome' || entry.name === 'chrome-linux' || entry.name.endsWith('/chrome')) {
+                    // Verifica se é executável
+                    if (fs.existsSync(fullPath)) {
+                      console.log(`✅ Encontrado: ${fullPath}`);
+                      return fullPath;
+                    }
                   }
                 }
               } catch (e) {
@@ -385,10 +396,17 @@ export async function launchBrowser() {
             }
           }
         }
+      } else {
+        console.warn(`⚠️ Diretório cache não existe: ${cacheBase}`);
       }
     } catch (e) {
-      console.warn('⚠️ Não foi possível encontrar Chrome automaticamente:', e.message);
+      console.warn('⚠️ Erro ao procurar Chrome:', e.message);
+      console.warn('⚠️ Stack:', e.stack?.substring(0, 200));
     }
+  }
+  
+  if (!executablePath) {
+    console.log('⚠️ Chrome não encontrado no cache, deixando Puppeteer encontrar automaticamente');
   }
   
   const launchOptions = {
