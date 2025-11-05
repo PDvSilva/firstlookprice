@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
 import path from "path";
+import fs from "fs";
 
 // Amazon domain mappings for EU countries
 export const AMAZON_DOMAINS = {
@@ -344,66 +345,25 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 export async function launchBrowser() {
   console.log('🌐 Iniciando Puppeteer...');
   
-  // Tenta encontrar o Chrome no cache do Render primeiro
-  const fs = await import('fs');
-  const possiblePaths = [
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    "/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux/chrome",
-    "/opt/render/.cache/puppeteer/chrome/linux-131.0.6778.204/chrome-linux/chrome",
-  ];
-  
-  let executablePath = null;
-  for (const chromePath of possiblePaths) {
-    if (chromePath && fs.existsSync(chromePath)) {
-      executablePath = chromePath;
-      console.log(`✅ Chrome encontrado em: ${executablePath}`);
-      break;
+  // Caminho padrão onde o Render instala o Chrome
+  const basePath = "/opt/render/.cache/puppeteer";
+  let chromeExecutable = "";
+
+  try {
+    const folders = fs.readdirSync(basePath);
+    const chromeFolder = folders.find(f => f.startsWith("chrome"));
+    if (chromeFolder) {
+      chromeExecutable = path.join(basePath, chromeFolder, "linux-127.0.6533.88", "chrome");
     }
+  } catch (err) {
+    console.warn("⚠️ Falha ao ler pasta do Chrome:", err.message);
   }
-  
-  // Se não encontrou, procura dinamicamente
-  if (!executablePath) {
-    const cacheBase = '/opt/render/.cache/puppeteer';
-    if (fs.existsSync(cacheBase)) {
-      console.log(`🔍 Procurando Chrome em: ${cacheBase}`);
-      const dirs = fs.readdirSync(cacheBase);
-      for (const dir of dirs) {
-        const chromeDir = path.join(cacheBase, dir);
-        if (fs.statSync(chromeDir).isDirectory()) {
-          const findChrome = (dirPath, depth = 0) => {
-            if (depth > 5) return null;
-            try {
-              const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-              for (const entry of entries) {
-                const fullPath = path.join(dirPath, entry.name);
-                if (entry.isDirectory()) {
-                  const found = findChrome(fullPath, depth + 1);
-                  if (found) return found;
-                } else if (entry.name === 'chrome') {
-                  if (fs.existsSync(fullPath)) {
-                    return fullPath;
-                  }
-                }
-              }
-            } catch (e) {
-              return null;
-            }
-            return null;
-          };
-          
-          const chromePath = findChrome(chromeDir);
-          if (chromePath) {
-            executablePath = chromePath;
-            console.log(`✅ Chrome encontrado dinamicamente: ${executablePath}`);
-            break;
-          }
-        }
-      }
-    }
-  }
-  
-  const launchOptions = {
+
+  console.log("📁 Chrome path:", chromeExecutable || "(não encontrado)");
+
+  const browser = await puppeteer.launch({
     headless: "new",
+    executablePath: chromeExecutable || undefined,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -412,16 +372,8 @@ export async function launchBrowser() {
       "--single-process",
       "--no-zygote",
     ],
-  };
-  
-  if (executablePath) {
-    launchOptions.executablePath = executablePath;
-    console.log(`📁 Usando Chrome em: ${executablePath}`);
-  } else {
-    console.log('⚠️ Chrome não encontrado, usando Puppeteer padrão');
-  }
-  
-  const browser = await puppeteer.launch(launchOptions);
+  });
+
   console.log('✅ Puppeteer iniciado com sucesso');
   return browser;
 }
