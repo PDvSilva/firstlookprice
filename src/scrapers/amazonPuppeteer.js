@@ -262,14 +262,26 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 
     if (!item) {
       console.warn(`⚠️ Nenhum item com preço encontrado em ${domain} para "${query}"`);
+      console.warn(`⚠️ Título da página: ${pageTitle}`);
+      console.warn(`⚠️ URL: ${url}`);
       throw new Error("no priced item");
     }
     
     console.log(`✅ Item encontrado em ${domain}:`, {
       title: item.title?.substring(0, 50) + '...',
       price: item.priceText,
-      hasImage: !!item.imageUrl
+      hasImage: !!item.imageUrl,
+      href: item.href?.substring(0, 50)
     });
+    
+    if (!item.title || !item.priceText || !item.href) {
+      console.error(`❌ Item incompleto:`, {
+        hasTitle: !!item.title,
+        hasPrice: !!item.priceText,
+        hasHref: !!item.href
+      });
+      throw new Error("incomplete item data");
+    }
 
     // Constrói o link corretamente
     let link = null;

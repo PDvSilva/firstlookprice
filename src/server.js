@@ -189,20 +189,44 @@ async function runScrape(q) {
 
     const raw = (await Promise.all(tasks)).filter(Boolean);
     console.log(`📊 ${raw.length} de ${SITES.length} sites retornaram resultados`);
+    
+    if (raw.length === 0) {
+      console.warn('⚠️ NENHUM resultado encontrado de nenhum site!');
+      console.warn('⚠️ Isso pode indicar:');
+      console.warn('   - Amazon mudou os seletores');
+      console.warn('   - Todos os sites retornaram erro');
+      console.warn('   - Produto não encontrado em nenhum site');
+      return [];
+    }
+    
+    console.log(`📦 Primeiros resultados brutos:`, raw.slice(0, 2).map(r => ({
+      country: r.country,
+      domain: r.domain,
+      title: r.title?.substring(0, 30),
+      price: r.price,
+      hasLink: !!r.link
+    })));
 
     for (const r of raw) {
-      r.priceEUR = await toEUR(r.price, r.currency);
-      
-      // Adiciona tag de afiliado ao link
-      const site = SITES.find(s => s.domain === r.domain);
-      if (site && site.tag) {
-        r.link = addAffiliateTag(r.link, site.tag);
+      try {
+        r.priceEUR = await toEUR(r.price, r.currency);
+        
+        // Adiciona tag de afiliado ao link
+        const site = SITES.find(s => s.domain === r.domain);
+        if (site && site.tag) {
+          r.link = addAffiliateTag(r.link, site.tag);
+        }
+      } catch (err) {
+        console.warn(`⚠️ Erro ao processar resultado de ${r.domain}:`, err.message);
       }
     }
 
-    raw.sort((a, b) => a.priceEUR - b.priceEUR);
+    const validResults = raw.filter(r => r.priceEUR && r.priceEUR > 0 && r.link);
+    console.log(`✅ ${validResults.length} resultados válidos após processamento`);
     
-    return raw;
+    validResults.sort((a, b) => a.priceEUR - b.priceEUR);
+    
+    return validResults;
   } catch (err) {
     console.error("❌ Erro no runScrape:", err.message);
     console.error("❌ Stack:", err.stack);
