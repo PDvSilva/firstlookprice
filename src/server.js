@@ -1,4 +1,11 @@
+// Log inicial para debug
+console.log('📦 Iniciando servidor...');
+console.log('📦 Node version:', process.version);
+console.log('📦 CWD:', process.cwd());
+
 import "dotenv/config";
+
+console.log('✅ dotenv configurado');
 
 import express from "express";
 
@@ -12,7 +19,12 @@ import { fileURLToPath } from "url";
 
 import pLimit from "p-limit";
 
+console.log('✅ Dependências básicas importadas');
+
+// Import do Puppeteer
+console.log('📦 Importando scraper...');
 import { launchBrowser, scrapeAmazonSite } from "./scrapers/amazonPuppeteer.js";
+console.log('✅ Scraper importado com sucesso');
 
 
 
@@ -20,13 +32,15 @@ const __filename = fileURLToPath(import.meta.url);
 
 const __dirname = path.dirname(__filename);
 
-
+console.log('✅ Paths configurados');
 
 const app = express();
 
 app.use(cors());
 
 app.use(express.static(path.join(__dirname, "..", "public")));
+
+console.log('✅ Express configurado');
 
 
 
@@ -189,12 +203,16 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+console.log('📦 Preparando para iniciar servidor na porta', PORT);
+
 try {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📍 Health check: http://0.0.0.0:${PORT}/api/health`);
   });
 } catch (error) {
   console.error('❌ Erro ao iniciar servidor:', error);
+  console.error('❌ Stack:', error.stack);
   process.exit(1);
 }
