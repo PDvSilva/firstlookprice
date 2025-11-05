@@ -57,22 +57,74 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
 
     await page.setExtraHTTPHeaders({ "accept-language": "en-GB,en;q=0.9" });
 
+    console.log(`🌐 Navegando para ${url}...`);
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    console.log(`✅ Página carregada`);
 
     // Se cair em CAPTCHA, sai
     const body = await page.content();
-    if (/captcha/i.test(body)) throw new Error("CAPTCHA page");
+    if (/captcha/i.test(body)) {
+      console.error(`🚫 CAPTCHA detectado em ${domain}`);
+      throw new Error("CAPTCHA page");
+    }
 
-    // Espera pela slot principal
-    await page.waitForSelector("div.s-main-slot", { timeout: 15000 });
+    // Verifica se a página carregou corretamente
+    const pageTitle = await page.title();
+    console.log(`📄 Título da página: ${pageTitle.substring(0, 50)}...`);
+
+    // Espera pela slot principal com retry
+    console.log(`⏳ Esperando pelo s-main-slot...`);
+    try {
+      await page.waitForSelector("div.s-main-slot", { timeout: 20000 });
+      console.log(`✅ s-main-slot encontrado`);
+    } catch (err) {
+      console.warn(`⚠️ s-main-slot não encontrado, tentando continuar...`);
+      // Continua mesmo sem encontrar o seletor
+    }
     
     // Aguarda um pouco mais para os preços carregarem
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Extrai o primeiro item com preço visível
+    console.log(`🔍 Extraindo dados da página...`);
     const item = await page.evaluate((domainName) => {
       const slot = document.querySelector("div.s-main-slot");
-      if (!slot) return null;
+      if (!slot) {
+        console.warn('s-main-slot não encontrado');
+        // Tenta encontrar cards em outros lugares
+        const altSlot = document.querySelector('[data-component-type="s-search-result"]') || 
+                       document.querySelector('.s-result-list') ||
+                       document.body;
+        if (!altSlot) return null;
+        
+        // Tenta encontrar cards alternativos
+        const altCards = Array.from(altSlot.querySelectorAll('[data-asin]')).filter(el => {
+          const asin = el.getAttribute("data-asin");
+          return asin && asin !== "";
+        });
+        
+        if (altCards.length === 0) return null;
+        
+        // Usa o primeiro card alternativo
+        const el = altCards[0];
+        const asin = el.getAttribute("data-asin");
+        
+        // Tenta encontrar título e preço
+        const titleEl = el.querySelector("h2 a span, h2 a, h2 span") || 
+                       el.querySelector('[data-cy="title-recipe"] a');
+        const priceEl = el.querySelector(".a-price .a-offscreen, .a-price-whole, .a-price span");
+        
+        if (titleEl && priceEl && asin) {
+          return {
+            title: titleEl.textContent.trim(),
+            href: `/dp/${asin}`,
+            priceText: priceEl.textContent.trim(),
+            imageUrl: null
+          };
+        }
+        
+        return null;
+      }
 
       const cards = Array.from(slot.querySelectorAll("div[data-asin][data-index]"));
 

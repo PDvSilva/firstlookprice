@@ -170,13 +170,19 @@ async function runScrape(q) {
     console.log(`🌍 Iniciando scraping em ${SITES.length} sites...`);
     const tasks = SITES.map(site => limit(() => {
       console.log(`🔍 Scraping ${site.country} (${site.domain})...`);
+      const startTime = Date.now();
       return sas(site, q, browser)
         .then(result => {
-          console.log(`✅ ${site.country} sucesso`);
+          const elapsed = Date.now() - startTime;
+          console.log(`✅ ${site.country} sucesso em ${elapsed}ms`);
           return result;
         })
         .catch(err => {
-          console.warn(`⚠️ ${site.country} falhou: ${err.message}`);
+          const elapsed = Date.now() - startTime;
+          console.warn(`⚠️ ${site.country} falhou após ${elapsed}ms: ${err.message}`);
+          if (err.stack) {
+            console.warn(`⚠️ Stack: ${err.stack.substring(0, 200)}`);
+          }
           return null;
         });
     }));
