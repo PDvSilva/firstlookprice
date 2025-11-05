@@ -66,7 +66,7 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Extrai o primeiro item com preço visível
-    const item = await page.evaluate(() => {
+    const item = await page.evaluate((domainName) => {
       const slot = document.querySelector("div.s-main-slot");
       if (!slot) return null;
 
@@ -139,16 +139,70 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
             continue; // Pula este item e tenta o próximo
           }
           
+          // Extrai imagem do produto
+          const imageSelectors = [
+            '.s-image img',
+            'img[data-image-latency]',
+            'img[data-a-dynamic-image]',
+            '.s-product-image img',
+            'img.s-image',
+            'img.a-dynamic-image',
+            'img[src*="images-na"]',
+            'img[src*="images-amazon"]'
+          ];
+          
+          let imageUrl = null;
+          for (const selector of imageSelectors) {
+            const imgEl = el.querySelector(selector);
+            if (imgEl) {
+              // Tenta múltiplos atributos
+              imageUrl = imgEl.getAttribute('data-src') || 
+                        imgEl.getAttribute('data-lazy-src') ||
+                        imgEl.getAttribute('src') || 
+                        imgEl.getAttribute('data-a-dynamic-image') ||
+                        imgEl.getAttribute('data-old-src');
+              
+              if (imageUrl) {
+                // Se for JSON string com múltiplas imagens, pega a maior
+                if (imageUrl.startsWith('{')) {
+                  try {
+                    const imgData = JSON.parse(imageUrl);
+                    const urls = Object.keys(imgData);
+                    if (urls.length > 0) {
+                      // Pega a URL com maior resolução (mais longa geralmente)
+                      imageUrl = urls.sort((a, b) => b.length - a.length)[0];
+                    }
+                  } catch {}
+                }
+                
+                // Limpa a URL (remove parâmetros de redimensionamento se necessário)
+                if (imageUrl && !imageUrl.startsWith('http')) {
+                  // Se for relativa, tenta construir URL completa
+                  if (imageUrl.startsWith('//')) {
+                    imageUrl = 'https:' + imageUrl;
+                  } else if (imageUrl.startsWith('/')) {
+                    imageUrl = 'https://' + domainName + imageUrl;
+                  }
+                }
+                
+                if (imageUrl && imageUrl.startsWith('http')) {
+                  break;
+                }
+              }
+            }
+          }
+          
           return {
             title: titleEl.textContent?.trim() || titleEl.innerText?.trim() || "",
             href: href,
-            priceText: priceText
+            priceText: priceText,
+            imageUrl: imageUrl
           };
         }
       }
 
       return null;
-    });
+    }, domain);
 
     if (!item) throw new Error("no priced item");
 
@@ -194,7 +248,15 @@ export async function scrapeAmazonSite({ domain, country, currency }, query, bro
       throw new Error("bad parse - invalid link or price");
     }
 
-    return { country, domain, currency, title: item.title, link, price };
+    return { 
+      country, 
+      domain, 
+      currency, 
+      title: item.title, 
+      link, 
+      price,
+      imageUrl: item.imageUrl || null
+    };
   } finally {
     await page.close().catch(() => {});
   }

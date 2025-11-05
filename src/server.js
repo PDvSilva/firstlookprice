@@ -34,19 +34,47 @@ const PORT = process.env.PORT || 10000;
 
 const cache = new Map(); // Cache para armazenar resultados
 
+// Configuração de afiliados Amazon (substitua pelos seus IDs reais)
+const AFFILIATE_TAGS = {
+  'es': process.env.AMAZON_AFFILIATE_ES || 'dogshoppt-21',
+  'fr': process.env.AMAZON_AFFILIATE_FR || 'dogshoppt01-21',
+  'de': process.env.AMAZON_AFFILIATE_DE || 'dogshoppt0e-21',
+  'it': process.env.AMAZON_AFFILIATE_IT || 'dogshoppt0d-21',
+  'uk': process.env.AMAZON_AFFILIATE_UK || 'dogshoppt00-21'
+};
+
 const SITES = [
 
-  { country:"🇪🇸 Spain",   domain:"amazon.es",   currency:"EUR" },
+  { country:"🇪🇸 Spain",   domain:"amazon.es",   currency:"EUR", tag: AFFILIATE_TAGS.es },
 
-  { country:"🇫🇷 France",  domain:"amazon.fr",   currency:"EUR" },
+  { country:"🇫🇷 France",  domain:"amazon.fr",   currency:"EUR", tag: AFFILIATE_TAGS.fr },
 
-  { country:"🇩🇪 Germany", domain:"amazon.de",   currency:"EUR" },
+  { country:"🇩🇪 Germany", domain:"amazon.de",   currency:"EUR", tag: AFFILIATE_TAGS.de },
 
-  { country:"🇮🇹 Italy",   domain:"amazon.it",   currency:"EUR" },
+  { country:"🇮🇹 Italy",   domain:"amazon.it",   currency:"EUR", tag: AFFILIATE_TAGS.it },
 
-  { country:"🇬🇧 UK",      domain:"amazon.co.uk",currency:"GBP" }
+  { country:"🇬🇧 UK",      domain:"amazon.co.uk",currency:"GBP", tag: AFFILIATE_TAGS.uk }
 
 ];
+
+/** Adiciona tag de afiliado ao link Amazon */
+function addAffiliateTag(url, tag) {
+  if (!tag || tag.includes('your-tag')) return url; // Não adiciona se não configurado
+  
+  try {
+    const urlObj = new URL(url);
+    
+    // Remove tags antigas se existirem
+    urlObj.searchParams.delete('tag');
+    
+    // Adiciona a nova tag
+    urlObj.searchParams.set('tag', tag);
+    
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
+}
 
 
 
@@ -91,6 +119,12 @@ async function runScrape(q) {
 
     for (const r of raw) {
       r.priceEUR = await toEUR(r.price, r.currency);
+      
+      // Adiciona tag de afiliado ao link
+      const site = SITES.find(s => s.domain === r.domain);
+      if (site && site.tag) {
+        r.link = addAffiliateTag(r.link, site.tag);
+      }
     }
 
     raw.sort((a, b) => a.priceEUR - b.priceEUR);
