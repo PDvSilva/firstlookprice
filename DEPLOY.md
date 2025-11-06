@@ -14,9 +14,9 @@
    - Selecione o branch `main` ou `master`
 
 3. **Configurar o serviço:**
-   - **Name:** `amazon-eu-comparator`
+   - **Name:** `firstlookprice` (ou `FirstLookPrice`)
    - **Environment:** `Node`
-   - **Build Command:** `npm install`
+   - **Build Command:** `npm install --prefer-offline --no-audit`
    - **Start Command:** `npm start`
    - **Plan:** Free (ou Hobby se quiser melhor performance)
 
@@ -27,7 +27,7 @@
 5. **Deploy:**
    - Clique em "Create Web Service"
    - Aguarde o build completar (~2-3 minutos)
-   - Seu app estará disponível em: `https://seu-app.onrender.com`
+   - Seu app estará disponível em: `https://firstlookprice.onrender.com` (ou o nome que escolher)
 
 ### ⚠️ Notas importantes para Render:
 
