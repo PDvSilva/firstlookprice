@@ -4,8 +4,9 @@ services:
     env: node
     plan: free
     region: frankfurt
-    buildCommand: npm install --prefer-offline --no-audit
+    buildCommand: npm install --prefer-offline --no-audit --legacy-peer-deps
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 10000
@@ -15,3 +16,5 @@ services:
         value: "/tmp/.puppeteer_cache"
       - key: NODE_ENV
         value: "production"
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: ""
